@@ -38,5 +38,8 @@ class AlignmentAnalysis : public BeamAnaBase {
   unsigned long int nEntries_;
   bool isProduction_;
   std::string alignparFile_; 
+  float zMin;
+  float zStep;
+  int zNsteps;
 };
 #endif

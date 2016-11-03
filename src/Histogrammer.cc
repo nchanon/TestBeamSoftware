@@ -183,7 +183,7 @@ void Histogrammer::bookTelescopeAnalysisHistograms() {
 
 }
 
-void Histogrammer::bookTrackFitHistograms(){
+void Histogrammer::bookTrackFitHistograms(float zMin, float zStep, int zNsteps){
   fout_->cd();
   fout_->mkdir("TrackFit");
   fout_->cd("TrackFit");
@@ -191,16 +191,19 @@ void Histogrammer::bookTrackFitHistograms(){
   new TH1I("d0_1tk1Hit_diffX","X_{TkAtDUT}-X_{DUT}, d0",10000,-10,10);
   new TH1I("d1_1tk1Hit_diffX","X_{TkAtDUT}-X_{DUT}, d1",10000,-10,10);
 
-  for (int iz=0; iz<100; iz++){
+  for (int iz=0; iz<zNsteps; iz++){
     new TH1I(Form("d0_1tk1Hit_diffX_iz%i", iz),"X_{TkAtDUT}-X_{DUT}, d0",10000,-10,10);
     new TH1I(Form("d1_1tk1Hit_diffX_iz%i", iz),"X_{TkAtDUT}-X_{DUT}, d0",10000,-10,10);
   }
 
-  new TH1F("d0_offsetVsZ", "x_{DUT} offset vs injected z_{DUT}, d0", 100, 200-5, 1200-5);
-  new TH1F("d1_offsetVsZ", "x_{DUT} offset vs injected z_{DUT},d1", 100, 200-5, 1200-5);
+  float zMax = zMin + ((float)zNsteps) * zStep;
+  float shift = zStep/2.;
 
-  new TH1F("d0_chi2VsZ","chi2 vs injected z_{DUT}, d0", 100, 200-5, 1200-5);
-  new TH1F("d1_chi2VsZ","chi2 vs injected z_{DUT}, d1", 100, 200-5, 1200-5);
+  new TH1F("d0_offsetVsZ", "x_{DUT} offset vs injected z_{DUT}, d0", zNsteps, zMin-shift, zMax-shift);
+  new TH1F("d1_offsetVsZ", "x_{DUT} offset vs injected z_{DUT},d1", zNsteps, zMin-shift, zMax-shift);
+
+  new TH1F("d0_chi2VsZ","chi2 vs injected z_{DUT}, d0", zNsteps, zMin-shift, zMax-shift);
+  new TH1F("d1_chi2VsZ","chi2 vs injected z_{DUT}, d1", zNsteps, zMin-shift, zMax-shift);
 
   new TH1I("d0_1tk1Hit_diffX_aligned","X_{TkAtDUT}-X_{DUT}, d0",10000,-10,10);
   new TH1I("d1_1tk1Hit_diffX_aligned","X_{TkAtDUT}-X_{DUT}, d1",10000,-10,10);

@@ -39,6 +39,11 @@ void AlignmentAnalysis::beginJob() {
   hist_ = outFile();
   setAddresses();
   nEntries_ = analysisTree()->GetEntries();
+
+  zMin = 200;
+  zStep = 20.;
+  zNsteps = 50;
+
   bookHistograms();
   analysisTree()->GetEntry(0);
   getCbcConfig(condEv()->cwd, condEv()->window);
@@ -59,7 +64,7 @@ void AlignmentAnalysis::beginJob() {
 
 void AlignmentAnalysis::bookHistograms() {
   hist_->bookEventHistograms();
-  hist_->bookTrackFitHistograms();
+  hist_->bookTrackFitHistograms(zMin, zStep, zNsteps);
 }
 
 void AlignmentAnalysis::eventLoop()
@@ -131,9 +136,9 @@ void AlignmentAnalysis::eventLoop()
 	float xDUT = (d0c0.at(0) - nstrips()/2) * dutpitch();
         xTkAtDUT = -1.*xTkAtDUT;
 	hist_->fillHist1D("TrackFit","d0_1tk1Hit_diffX", xDUT-xTkAtDUT);
-	DUT_z_try = 200; //300
-	for (int iz=0; iz<100; iz++){
-	  DUT_z_try += 10.;
+	DUT_z_try = zMin; //300
+	for (int iz=0; iz<zNsteps; iz++){
+	  DUT_z_try += zStep;
 	  //DUT_z_try += (float)(iz*5);
 	  xTkAtDUT = selectedTk[0].yPos + (DUT_z_try-aLparameteres().FEI4_z)*selectedTk[0].dydz;
           xTkAtDUT = -1.*xTkAtDUT;
@@ -145,10 +150,10 @@ void AlignmentAnalysis::eventLoop()
         //xTkAtDUT = -1.*xTkAtDUT;
 	float xDUT = (d1c0.at(0) - nstrips()/2) * dutpitch();
 	hist_->fillHist1D("TrackFit","d1_1tk1Hit_diffX", xDUT-xTkAtDUT);
-	DUT_z_try = 200;//300;
-	for (int iz=0; iz<100; iz++){
+	DUT_z_try = zMin;//300;
+	for (int iz=0; iz<zNsteps; iz++){
 	  //DUT_z_try += (float)(iz*5);
-	  DUT_z_try += 10.;
+	  DUT_z_try += zStep;
 	  xTkAtDUT = selectedTk[0].yPos + (DUT_z_try-aLparameteres().FEI4_z)*selectedTk[0].dydz;
           xTkAtDUT = -1.*xTkAtDUT;
 	  hist_->fillHist1D("TrackFit",Form("d1_1tk1Hit_diffX_iz%i", iz), xDUT-xTkAtDUT);
@@ -158,10 +163,10 @@ void AlignmentAnalysis::eventLoop()
   }//End of First Loop
   
   cout << "Computing chi2" << endl;
-  float* sigma_d0 = new float[100];
-  float* sigma_d1 = new float[100];
-  float* offset_err_d0 = new float[100];
-  float* offset_err_d1 = new float[100];
+  float* sigma_d0 = new float[zNsteps];
+  float* sigma_d1 = new float[zNsteps];
+  float* offset_err_d0 = new float[zNsteps];
+  float* offset_err_d1 = new float[zNsteps];
   
   std::pair<float, float> line_d0 = GetOffsetVsZ("d0", &sigma_d0, &offset_err_d0);
   std::pair<float, float> line_d1 = GetOffsetVsZ("d1", &sigma_d1, &offset_err_d1);
@@ -171,11 +176,11 @@ void AlignmentAnalysis::eventLoop()
   
   float resTelescopeSquared = (90*90/12. + 3.5*3.5) / 1000. /1000.;
   float resTelescope = sqrt(0.090*0.090/12. + 0.0035*0.0035);
-  float chi2_d0[100];
-  float chi2_d1[100];
-  float Nevent_d0_window[100];
-  float Nevent_d1_window[100];
-  for (int iz=0; iz<100; iz++) {
+  float* chi2_d0 = new float[zNsteps];
+  float* chi2_d1 = new float[zNsteps];
+  float* Nevent_d0_window = new float[zNsteps];
+  float* Nevent_d1_window = new float[zNsteps];
+  for (int iz=0; iz<zNsteps; iz++) {
     chi2_d0[iz]=0;
     chi2_d1[iz]=0;
     Nevent_d0_window[iz]=0;
@@ -218,8 +223,8 @@ void AlignmentAnalysis::eventLoop()
     if (d0c0.size()==1){
       nEv1tk1hit_d0++;
       float xDUT = (d0c0.at(0) - nstrips()/2) * dutpitch();
-      for (int iz=0; iz<100; iz++){
-	DUT_z_try = 200 + (float)(iz*10);
+      for (int iz=0; iz<zNsteps; iz++){
+	DUT_z_try = zMin + (float)(iz*zStep);
 	float offset = line_d0.first * DUT_z_try + line_d0.second;
 	float xTkAtDUT = selectedTk[0].yPos + (DUT_z_try-aLparameteres().FEI4_z)*selectedTk[0].dydz;// + offset;
         xTkAtDUT = -1.*xTkAtDUT + offset;
@@ -233,8 +238,8 @@ void AlignmentAnalysis::eventLoop()
     if (d1c0.size()==1){
       nEv1tk1hit_d1++;
       float xDUT = (d1c0.at(0) - nstrips()/2) * dutpitch();
-      for (int iz=0; iz<100; iz++){
-	DUT_z_try = 200 + (float)(iz*10);
+      for (int iz=0; iz<zNsteps; iz++){
+	DUT_z_try = zMin + (float)(iz*zStep);
 	float offset = line_d1.first * DUT_z_try + line_d1.second;
 	float xTkAtDUT = selectedTk[0].yPos + (DUT_z_try-aLparameteres().FEI4_z)*selectedTk[0].dydz;// + offset;
         xTkAtDUT = -1.*xTkAtDUT + offset;
@@ -248,8 +253,8 @@ void AlignmentAnalysis::eventLoop()
   }//end of 2nd loop over events
   
   
-  for (int iz=0; iz<100; iz++){ 
-    DUT_z_try = 200 + (float)(iz*10);
+  for (int iz=0; iz<zNsteps; iz++){ 
+    DUT_z_try = zMin + (float)(iz*zStep);
     chi2_d0[iz] /= Nevent_d0_window[iz];//nEv1tk1hit_d0;
     chi2_d1[iz] /= Nevent_d1_window[iz];//nEv1tk1hit_d1;
     cout << "z="<<DUT_z_try<<" chi2_d0="<<chi2_d0[iz]<<" chi2_d1="<<chi2_d1[iz]<<endl;
@@ -257,7 +262,7 @@ void AlignmentAnalysis::eventLoop()
     if (chi2_d1[iz]>0) hist_->FillAlignmentOffsetVsZ("d1", "_chi2VsZ", iz, DUT_z_try, chi2_d1[iz], offset_err_d1[iz]/resTelescope);
   }
   
-  TF1* fParabolaChi2VsZ = new TF1("fParabolaChi2VsZ", "[0]*x*x+[1]*x+[2]", 200, 690);
+  TF1* fParabolaChi2VsZ = new TF1("fParabolaChi2VsZ", "[0]*x*x+[1]*x+[2]", zMin, 690);
   TH1* htmp = dynamic_cast<TH1F*>(hist_->GetHistoByName("TrackFit","d0_chi2VsZ"));
   //TH1* htmp = (TH1F*) hist_->GetHistoByName("d0", "_chi2VsZ");
   htmp->Fit("fParabolaChi2VsZ");
@@ -392,13 +397,13 @@ std::pair<float, float> AlignmentAnalysis::GetOffsetVsZ(const char* det, float**
   
   TF1* fGausExtractedX = new TF1("fGausExtractedX", "gaus", -10, 10);
   TH1* htmp;
-  float offset[100];
-  //float offset_err[100];
-  float injectedZ[100];
+  float* offset = new float[zNsteps];
+  //float offset_err[zNsteps];
+  float* injectedZ = new float[zNsteps];
   float center, rms;
   bool failedFit = false;
   
-  for (int iz=0; iz<100; iz++){
+  for (int iz=0; iz<zNsteps; iz++){
     std::string hn = det + std::string("_1tk1Hit_diffX_iz") + std::to_string((iz));
     htmp = dynamic_cast<TH1I*>(hist_->GetHistoByName("TrackFit", hn));   
     //htmp = (TH1I*) hist_->GetHistoByName(det, Form("_1tk1Hit_diffX_iz%i",iz));
@@ -418,20 +423,20 @@ std::pair<float, float> AlignmentAnalysis::GetOffsetVsZ(const char* det, float**
     
     offset[iz] = fGausExtractedX->GetParameter(1);
     (*offset_err)[iz] = fGausExtractedX->GetParError(1);
-    injectedZ[iz] = 200 + (float)(iz*10);
+    injectedZ[iz] = zMin + (float)(iz*zStep);
     //failedFit = false;
     //if ((*offset_err)[iz]/offset[iz] > 1 || !((*offset_err)[iz]>0)) failedFit = true;
     //if (!failedFit) hist_->FillAlignmentOffsetVsZ(det, "_offsetVsZ", iz, injectedZ[iz], offset[iz], (*offset_err)[iz]);
   }
   
-  for (int iz=0; iz<100; iz++){
+  for (int iz=0; iz<zNsteps; iz++){
     cout << "iz="<< iz<<" z="<<injectedZ[iz]<<" offset = "<<offset[iz]<< " +/- " <<(*offset_err)[iz] << endl;
     failedFit = false;
     if ((*offset_err)[iz]/offset[iz] > 1 || !((*offset_err)[iz]>0)) failedFit = true;
     if (!failedFit) hist_->FillAlignmentOffsetVsZ(det, "_offsetVsZ", iz, injectedZ[iz], offset[iz], (*offset_err)[iz]);
   }
   
-  TF1* fOffsetVsZ = new TF1("fOffsetVsZ","[0]*x+[1]", injectedZ[0], injectedZ[49]);
+  TF1* fOffsetVsZ = new TF1("fOffsetVsZ","[0]*x+[1]", injectedZ[0], injectedZ[zNsteps-1]);
   std::string hn = det + std::string("_offsetVsZ");
   htmp = dynamic_cast<TH1F*>(hist_->GetHistoByName("TrackFit", hn));  
   //htmp = (TH1I*) hist_->GetHistoByName(det, "_offsetVsZ");
